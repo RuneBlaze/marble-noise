@@ -1,0 +1,9 @@
+[package]
+name = "marble-noise"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = "0.25.1"
+noise = "0.9.0"
+palette = "0.7.6"
