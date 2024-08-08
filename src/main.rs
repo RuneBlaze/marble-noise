@@ -38,10 +38,12 @@ fn mix(c0: Okhsl, c1: Okhsl, t: f64) -> Okhsl {
 q *= 0.7 + 0.2*cos(0.05*iTime);
  */
 
-fn map_to_color(q: &[f64; 2], r: &[f64; 2], m: f64, u: f64) -> Okhsl {
+fn map_to_color(q: &[f64; 2], r: &[f64; 2], m: f64, u: f64, v: f64) -> Okhsl {
     let mut c = Okhsl::new(261.0 as f32, 58.0 / 100.0 as f32, 40.0 / 100.0 as f32);
     c.saturation = lerp(c.saturation as f64, 1.0, dot(q)) as f32;
     c.lightness = lerp(c.lightness as f64, 1.0, 0.5 * r[0] * r[0]) as f32;
+    c.lightness = lerp(c.lightness as f64, 0.3, u * u * 0.5 + v * v * 0.5) as f32;
+    c.lightness = c.lightness.min(1.0);
     return c;
 }
 
@@ -57,14 +59,18 @@ fn generate_image_from_fbm(t: f64) -> RgbImage {
     let mut img = RgbImage::new(427, 240);
     let mut q_buf = [0.0, 0.0];
     let mut r_buf = [0.0, 0.0];
+    let scale = 128.0;
     for (x, y, pixel) in img.enumerate_pixels_mut() {
-        let p = [x as f64 / 128.0 - (427.0 / 128.0) / 2.0, y as f64 / 128.0 - 4.2];
-        let p = cartesian2polar(p);
+        let p = [x as f64 / scale - (427.0 / scale) / 2.0, y as f64 / scale - 4.2];
+        // let p = cartesian2polar(p);
         // add angles by time
         let p = [p[0], p[1] + 0.1 * t + (x as f64 / 50.0).sqrt()];
         let value: f64 = pattern(&fbm, p, &mut q_buf, &mut r_buf, t);
-        let u = x as f64 / 128.0 - (427.0 / 128.0) / 2.0;
-        let okhsv = map_to_color(&q_buf, &r_buf, value, u);
+        let u = x as f64 / scale - (427.0 / scale) / 2.0;
+        let v = y as f64 / scale - (240.0 / scale) / 2.0;
+        // let u = x as f64 / 427.0 - 0.5;
+        // let v = y as f64 / 240.0 - 0.5;
+        let okhsv = map_to_color(&q_buf, &r_buf, value, u, v);
         let rgb = Srgb::from_color_unclamped(okhsv);
         let r = (rgb.red * 255.0).min(255.0) as u8;
         let g = (rgb.green * 255.0).min(255.0) as u8;
@@ -75,7 +81,7 @@ fn generate_image_from_fbm(t: f64) -> RgbImage {
 }
 
 fn main() {
-    for i in 0..120 {
+    for i in 0..(120*4) {
         let img = generate_image_from_fbm(i as f64 / 900.0);
         img.save(format!("images/{:0>3}.png", i)).unwrap();
     }
